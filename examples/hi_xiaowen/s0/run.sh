@@ -10,7 +10,7 @@ num_keywords=2
 config=conf/ds_tcn.yaml
 norm_mean=true
 norm_var=true
-gpus="0,1"
+gpus="0"
 
 checkpoint=
 dir=exp/ds_tcn
