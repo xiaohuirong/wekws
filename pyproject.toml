@@ -18,6 +18,8 @@ dependencies = [
     "langid",
     "pypinyin",
     "wenet",
+    "torch==2.5.1",
+    "torchaudio==2.5.1",
 ]
 
 [dependency-groups]
