@@ -15,7 +15,7 @@ gpus="0"
 checkpoint=
 dir=exp/ds_tcn
 
-num_average=30
+num_average=10
 score_checkpoint=$dir/avg_${num_average}.pt
 
 download_dir=./data/local # your data dir

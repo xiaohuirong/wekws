@@ -18,8 +18,10 @@ dependencies = [
     "langid",
     "pypinyin",
     "wenet",
-    "torch==2.5.1",
-    "torchaudio==2.5.1",
+    "torch==2.10.0",
+    "torchaudio==2.10.0",
+    "torchcodec>=0.10.0",
+    "onnxscript>=0.6.2",
 ]
 
 [dependency-groups]
@@ -37,5 +39,6 @@ dev = [
 ]
 
 [tool.uv.sources]
-wenet = { git = "https://github.com/xiaohuirong/wenet", branch = "for_wekws" }
+wenet = { git = "https://github.com/xiaohuirong/wenet", branch = "main" }
+# wenet = { path = "../wenet" }
 

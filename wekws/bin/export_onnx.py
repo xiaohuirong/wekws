@@ -64,7 +64,7 @@ def main():
                       input_names=['input', 'cache'],
                       output_names=['output', 'r_cache'],
                       dynamic_axes=dynamic_axes,
-                      opset_version=13,
+                      opset_version=17,
                       verbose=False,
                       do_constant_folding=True)
 
