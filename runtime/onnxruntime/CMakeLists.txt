@@ -10,6 +10,13 @@ get_filename_component(fc_base "fc_base" REALPATH BASE_DIR "${CMAKE_CURRENT_SOUR
 set(FETCHCONTENT_BASE_DIR ${fc_base})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
+# Auto patch portaudio cmake version
+FetchContent_Declare(
+  portaudio
+  URL      https://github.com/PortAudio/portaudio/archive/refs/tags/v19.7.0.tar.gz
+  PATCH_COMMAND sed -i "s/CMAKE_MINIMUM_REQUIRED(VERSION 2.8)/CMAKE_MINIMUM_REQUIRED(VERSION 3.13)/" CMakeLists.txt
+)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -g -pthread")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
