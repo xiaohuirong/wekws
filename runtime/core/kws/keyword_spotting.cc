@@ -35,9 +35,9 @@ KeywordSpotting::KeywordSpotting(const std::string& model_path) {
   auto metadata = session_->GetModelMetadata();
   Ort::AllocatorWithDefaultOptions allocator;
   cache_dim_ =
-      std::stoi(metadata.LookupCustomMetadataMap("cache_dim", allocator));
+      std::stoi(metadata.LookupCustomMetadataMapAllocated("cache_dim", allocator).get());
   cache_len_ =
-      std::stoi(metadata.LookupCustomMetadataMap("cache_len", allocator));
+      std::stoi(metadata.LookupCustomMetadataMapAllocated("cache_len", allocator).get());
   std::cout << "Kws Model Info:" << std::endl
             << "\tcache_dim: " << cache_dim_ << std::endl
             << "\tcache_len: " << cache_len_ << std::endl;
