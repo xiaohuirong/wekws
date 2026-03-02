@@ -43,6 +43,8 @@ int main(int argc, char* argv[]) {
 
   // Simulate streaming, detect batch by batch
   int offset = 0;
+  bool detected = false;
+  float threshold = 0.8;
   while (true) {
     std::vector<std::vector<float>> feats;
     bool ok = feature_pipeline.Read(batch_size, &feats);
@@ -52,6 +54,7 @@ int main(int argc, char* argv[]) {
       std::cout << "frame " << offset + i << " prob";
       for (int j = 0; j < prob[i].size(); j++) {
         std::cout << " " << prob[i][j];
+        if (prob[i][j] > threshold) detected = true;
       }
       std::cout << std::endl;
     }
@@ -59,5 +62,12 @@ int main(int argc, char* argv[]) {
     if (!ok) break;
     offset += prob.size();
   }
+
+  if (detected) {
+    std::cout << "Final Result: detected" << std::endl;
+  } else {
+    std::cout << "Final Result: rejected" << std::endl;
+  }
+
   return 0;
 }
