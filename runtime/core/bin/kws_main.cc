@@ -21,15 +21,21 @@
 #include "utils/log.h"
 
 int main(int argc, char* argv[]) {
-  if (argc != 5) {
+  if (argc < 5) {
     LOG(FATAL) << "Usage: kws_main fbank_dim(int) batch_size(int) "
-               << "kws_model_path test_wav_path";
+               << "kws_model_path test_wav_path [threshold]";
   }
 
   const int num_bins = std::stoi(argv[1]);  // Fbank feature dim
   const int batch_size = std::stoi(argv[2]);
   const std::string model_path = argv[3];
   const std::string wav_path = argv[4];
+
+  float threshold = 0.8;
+  if (argc >= 6) {
+    threshold = std::stof(argv[5]);
+  }
+  LOG(INFO) << "Config: threshold " << threshold;
 
   wenet::WavReader wav_reader(wav_path);
   int num_samples = wav_reader.num_samples();
@@ -44,7 +50,6 @@ int main(int argc, char* argv[]) {
   // Simulate streaming, detect batch by batch
   int offset = 0;
   bool detected = false;
-  float threshold = 0.8;
   while (true) {
     std::vector<std::vector<float>> feats;
     bool ok = feature_pipeline.Read(batch_size, &feats);
