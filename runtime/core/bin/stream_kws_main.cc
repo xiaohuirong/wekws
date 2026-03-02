@@ -17,6 +17,10 @@
 #include <iostream>
 #include <string>
 
+#ifdef __linux__
+#include <alsa/asoundlib.h>
+#endif
+
 #include "portaudio.h"  // NOLINT
 
 #include "frontend/feature_pipeline.h"
@@ -37,6 +41,9 @@ static int RecordCallback(const void* input, void* output,
                           unsigned long frames_count,  // NOLINT
                           const PaStreamCallbackTimeInfo* time_info,
                           PaStreamCallbackFlags status_flags, void* user_data) {
+  if (input == nullptr) {
+    return paContinue;
+  }
   const auto* pcm_data = static_cast<const int16_t*>(input);
   std::vector<int16_t> v(pcm_data, pcm_data + frames_count);
   g_feature_pipeline->AcceptWaveform(v);
@@ -63,13 +70,20 @@ int main(int argc, char* argv[]) {
   wekws::KeywordSpotting spotter(model_path);
 
   signal(SIGINT, SigRoutine);
+
+#ifdef __linux__
+  // Suppress ALSA error messages
+  snd_lib_error_set_handler(NULL);
+#endif
+
   PaError err = Pa_Initialize();
   PaStreamParameters params;
-  std::cout << err << " " << Pa_GetDeviceCount() << std::endl;
+  std::cout << "Pa_Initialize: " << err << " Device Count: " << Pa_GetDeviceCount() << std::endl;
   params.device = Pa_GetDefaultInputDevice();
   if (params.device == paNoDevice) {
     LOG(FATAL) << "Error: No default input device.";
   }
+  std::cout << "Using Device: " << params.device << " (" << Pa_GetDeviceInfo(params.device)->name << ")" << std::endl;
   params.channelCount = 1;
   params.sampleFormat = paInt16;
   params.suggestedLatency =
@@ -77,7 +91,7 @@ int main(int argc, char* argv[]) {
   params.hostApiSpecificStreamInfo = NULL;
   PaStream* stream;
   // Callback and spot pcm date each `interval` ms.
-  int interval = 500;
+  int interval = 200;
   int frames_per_buffer = 16000 / 1000 * interval;
   Pa_OpenStream(&stream, &params, NULL, 16000, frames_per_buffer, paClipOff,
                 RecordCallback, NULL);
@@ -86,9 +100,10 @@ int main(int argc, char* argv[]) {
 
   std::cout << std::setiosflags(std::ios::fixed) << std::setprecision(2);
   while (Pa_IsStreamActive(stream)) {
-    Pa_Sleep(interval);
     std::vector<std::vector<float>> feats;
-    g_feature_pipeline->Read(batch_size, &feats);
+    if (!g_feature_pipeline->Read(batch_size, &feats)) {
+      break;
+    }
     std::vector<std::vector<float>> prob;
     spotter.Forward(feats, &prob);
     for (int t = 0; t < prob.size(); t++) {
