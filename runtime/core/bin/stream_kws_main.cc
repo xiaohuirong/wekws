@@ -58,12 +58,22 @@ static int RecordCallback(const void* input, void* output,
 }
 
 int main(int argc, char* argv[]) {
-  if (argc != 4) {
-    LOG(FATAL) << "Usage: kws_main fbank_dim batch_size kws_model_path";
+  if (argc < 4) {
+    LOG(FATAL) << "Usage: kws_main fbank_dim batch_size kws_model_path [threshold] [min_frames]";
   }
   const int num_bins = std::stoi(argv[1]);  // Fbank feature dim
   const int batch_size = std::stoi(argv[2]);
   const std::string model_path = argv[3];
+
+  float threshold = 0.8f;
+  if (argc >= 5) {
+    threshold = std::stof(argv[4]);
+  }
+  int min_frames = 5;
+  if (argc >= 6) {
+    min_frames = std::stoi(argv[5]);
+  }
+  LOG(INFO) << "Config: threshold " << threshold << " min_frames " << min_frames;
 
   wenet::FeaturePipelineConfig feature_config(num_bins, 16000);
   g_feature_pipeline = std::make_shared<wenet::FeaturePipeline>(feature_config);
@@ -99,6 +109,10 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "=== Now recording!! Please speak into the microphone. ===";
 
   std::cout << std::setiosflags(std::ios::fixed) << std::setprecision(2);
+  int num_keywords = 0; // Will be initialized after first forward
+  std::vector<float> sliding_probs;
+  std::vector<int> consecutive_frames;
+
   while (Pa_IsStreamActive(stream)) {
     std::vector<std::vector<float>> feats;
     if (!g_feature_pipeline->Read(batch_size, &feats)) {
@@ -106,12 +120,33 @@ int main(int argc, char* argv[]) {
     }
     std::vector<std::vector<float>> prob;
     spotter.Forward(feats, &prob);
+    
+    if (num_keywords == 0 && prob.size() > 0) {
+      num_keywords = prob[0].size();
+      sliding_probs.resize(num_keywords, 0.0f);
+      consecutive_frames.resize(num_keywords, 0);
+    }
+
     for (int t = 0; t < prob.size(); t++) {
-      std::cout << "keywords prob:";
-      for (int i = 0; i < prob[t].size(); i++) {
-        std::cout << " kw[" << i << "] " << prob[t][i];
+      for (int i = 0; i < num_keywords; i++) {
+        // Simple moving average (EMA)
+        sliding_probs[i] = sliding_probs[i] * 0.7f + prob[t][i] * 0.3f;
+
+        if (sliding_probs[i] > threshold) {
+          consecutive_frames[i]++;
+          if (consecutive_frames[i] >= min_frames) {
+            std::cout << "Keyword detected! Index: " << i 
+                      << " Prob (smoothed): " << sliding_probs[i] 
+                      << " Duration (frames): " << consecutive_frames[i] << std::endl;
+            // Reset for this keyword to avoid double trigger
+            sliding_probs[i] = 0.0f;
+            consecutive_frames[i] = 0;
+            spotter.Reset();
+          }
+        } else {
+          consecutive_frames[i] = 0;
+        }
       }
-      std::cout << std::endl;
     }
   }
   Pa_CloseStream(stream);
